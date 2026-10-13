@@ -1,0 +1,111 @@
+name: Multi-Platform Build & Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform_name: Windows-x64
+            vst3_path: build/LupitPhaseExpander_artefacts/Release/VST3/LupitPhaseExpander.vst3
+            standalone_path: build/LupitPhaseExpander_artefacts/Release/Standalone/LupitPhaseExpander.exe
+            archive_ext: zip
+          - os: macos-latest
+            platform_name: macOS-Universal
+            vst3_path: build/LupitPhaseExpander_artefacts/Release/VST3/LupitPhaseExpander.vst3
+            standalone_path: build/LupitPhaseExpander_artefacts/Release/Standalone/LupitPhaseExpander.app
+            archive_ext: zip
+          - os: ubuntu-latest
+            platform_name: Linux-x86_64
+            vst3_path: build/LupitPhaseExpander_artefacts/Release/VST3/LupitPhaseExpander.vst3
+            standalone_path: build/LupitPhaseExpander_artefacts/Release/Standalone/LupitPhaseExpander
+            archive_ext: tar.gz
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # Linux-specific GUI and audio dependencies
+      - name: Install Linux Dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libasound2-dev \
+            libx11-dev \
+            libxinerama-dev \
+            libxext-dev \
+            libxrandr-dev \
+            libxcursor-dev \
+            libfreetype6-dev \
+            libgl1-mesa-dev
+
+      # Configure CMake
+      - name: Configure CMake (Windows/Linux)
+        if: runner.os != 'macOS'
+        run: |
+          cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Configure CMake (macOS Universal)
+        if: runner.os == 'macOS'
+        run: |
+          cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+
+      # Build Targets
+      - name: Build VST3 and Standalone
+        run: |
+          cmake --build build --config Release --parallel
+
+      # Package Artifacts (Windows)
+      - name: Package Binaries (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          mkdir -p dist
+          7z a dist/LupitPhaseExpander-VST3-${{ matrix.platform_name }}.zip ./${{ matrix.vst3_path }}
+          7z a dist/LupitPhaseExpander-Standalone-${{ matrix.platform_name }}.zip ./${{ matrix.standalone_path }}
+
+      # Package Artifacts (macOS)
+      - name: Package Binaries (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          mkdir -p dist
+          zip -r -y dist/LupitPhaseExpander-VST3-${{ matrix.platform_name }}.zip ./${{ matrix.vst3_path }}
+          zip -r -y dist/LupitPhaseExpander-Standalone-${{ matrix.platform_name }}.zip ./${{ matrix.standalone_path }}
+
+      # Package Artifacts (Linux)
+      - name: Package Binaries (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          mkdir -p dist
+          tar -czvf dist/LupitPhaseExpander-VST3-${{ matrix.platform_name }}.tar.gz -C $(dirname ${{ matrix.vst3_path }}) $(basename ${{ matrix.vst3_path }})
+          tar -czvf dist/LupitPhaseExpander-Standalone-${{ matrix.platform_name }}.tar.gz -C $(dirname ${{ matrix.standalone_path }}) $(basename ${{ matrix.standalone_path }})
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: LupitPhaseExpander-${{ matrix.platform_name }}
+          path: dist/*
+
+      # Attach to GitHub Release if a tag was pushed or manually triggered
+      - name: Upload to Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
