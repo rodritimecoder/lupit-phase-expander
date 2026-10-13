@@ -25,7 +25,7 @@ jobs:
             standalone_path: build/LupitPhaseExpander_artefacts/Release/Standalone/LupitPhaseExpander.exe
             archive_ext: zip
           - os: macos-latest
-            platform_name: macOS-Universal
+            platform_name: macOS-AppleSilicon-arm64
             vst3_path: build/LupitPhaseExpander_artefacts/Release/VST3/LupitPhaseExpander.vst3
             standalone_path: build/LupitPhaseExpander_artefacts/Release/Standalone/LupitPhaseExpander.app
             archive_ext: zip
@@ -65,12 +65,12 @@ jobs:
         run: |
           sudo xcode-select -s /Applications/Xcode_15.4.app/Contents/Developer || true
 
-      - name: Configure CMake (macOS Universal)
+      - name: Configure CMake (macOS Apple Silicon arm64)
         if: runner.os == 'macOS'
         run: |
           cmake -B build -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_OSX_DEPLOYMENT_TARGET="11.0" \
-            -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
+            -DCMAKE_OSX_ARCHITECTURES="arm64" \
             -DCMAKE_CXX_FLAGS="-Wno-deprecated-declarations -Wno-error=deprecated-declarations -Wno-error=unavailable-declarations" \
             -DCMAKE_OBJCXX_FLAGS="-Wno-deprecated-declarations -Wno-error=deprecated-declarations -Wno-error=unavailable-declarations"
 
