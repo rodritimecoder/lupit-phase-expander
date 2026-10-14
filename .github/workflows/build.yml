@@ -24,7 +24,7 @@ jobs:
             vst3_path: build/LupitPhaseExpander_artefacts/Release/VST3/LupitPhaseExpander.vst3
             standalone_path: build/LupitPhaseExpander_artefacts/Release/Standalone/LupitPhaseExpander.exe
             archive_ext: zip
-          - os: macos-latest
+          - os: macos-14
             platform_name: macOS-AppleSilicon-arm64
             vst3_path: build/LupitPhaseExpander_artefacts/Release/VST3/LupitPhaseExpander.vst3
             standalone_path: build/LupitPhaseExpander_artefacts/Release/Standalone/LupitPhaseExpander.app
